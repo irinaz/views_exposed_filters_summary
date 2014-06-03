@@ -1,0 +1,134 @@
+<?php
+ 
+
+function views_exposed_filters_summary($view){
+  $filtersSummary = array();
+  foreach ($view->filter as $filterKey=>$filter){
+
+    if(!empty($filter->value)){
+      //dsm($filterKey);
+      if($filterKey == "field_total_company_paying_value"){
+        //dsm($f);
+      }
+      if($filter->table == 'node' && $filter->field == 'title'){
+        $filtersSummary[$k] = array("label"=>$filter->options['expose']['label'],"value"=>array($filter->value), // what is $k??
+             "op"=>"Contains all words from");
+        continue;
+      }
+      $fieldName = $filter->definition['field_name']; // error Undefined index: field_name in views_exposed_filters_summary() (line 18
+      $fieldInfo=field_info_field($fieldName);
+
+      //dsm($finfo);
+
+      $filterSummary = array("label"=>$filter->definition['title short'],"value"=>$filter->value);  // Undefined index: title short in views_exposed_filters_summary() (line 23
+	  
+      $includeFilter=true;
+      switch($fieldInfo['type']){
+      	case "list_text":
+      	  if(!empty($fieldInfo['settings']['allowed_values'])){
+      	    foreach ($filterSummary["value"] as $key=>$value){
+      	      $filterSummary["value"][$key]=$fieldInfo['settings']['allowed_values'][$value];
+      	    }
+      	  }
+      	  break;
+      	case "taxonomy_term_reference":
+      	  foreach ($filterSummary["value"] as $key=>$value){
+      	    $term = taxonomy_term_load($value);
+      	    $filterSummary["value"][$key]=$term->name;
+      	  }
+      	  break;
+      	case "list_boolean":
+      	  foreach ($filterSummary["value"] as $key=>$value){
+      	    $filterSummary["value"][$key]=$filterSummary["value"][$key] == "1" || $filterSummary["value"][$key] == "Yes" ? "Yes" : "No" ;
+      	  }
+      	  break;
+      	case "datetime":
+      	  if($filter->operator == "="){
+      	    if(empty($filterSummary["value"]["value"])){
+      	      continue;
+      	    }
+      	    $filterSummary["value"] = array( $filterSummary["value"]["value"]);
+      	    $filterSummary["op"] = "=";
+      	  }else if($filter->operator == "between"){
+      	    
+      	    if(empty($filter->value["min"])){
+      	      if(empty($filter->value["max"])){
+      	        $includeFilter=false;
+      	      }else{
+      	        $filterSummary["op"] = "before";
+      	        $filterSummary["value"] = array( $filterSummary["value"]["max"]);
+      	      }
+      	    }else{
+      	      if(empty($filter->value["max"])){
+      	        $filterSummary["op"] = "after";
+      	        $filterSummary["value"] = array( $filterSummary["value"]["min"]);
+      	      }else{
+      	        $filterSummary["op"] = "between";
+      	        $filterSummary["value"] = array( $filterSummary["value"]["min"],$filterSummary["value"]["max"]);
+      	      }
+      	    }
+      	  }
+      	  break;
+      	case "number_decimal":
+      	  
+      	  if($filter->operator == "="){
+      	    if(empty($filterSummary["value"]["value"])){
+      	      continue;
+      	    }
+      	    $filterSummary["value"] = array( $filterSummary["value"]["value"]);
+      	    $$filterSummary["op"] = "=";
+      	  }else if($filter->operator == "between"){
+      	     
+      	    if(empty($filter->value["min"])){
+      	      if(empty($filter->value["max"])){
+      	        $includeFilter=false;
+      	      }else{
+      	        $filterSummary["op"] = "less than";
+      	        $filterSummary["value"] = array( $filterSummary["value"]["max"]);
+      	      }
+      	    }else{
+      	      if(empty($filter->value["max"])){
+      	        $filterSummary["op"] = "more than";
+      	        $filterSummary["value"] = array( $filterSummary["value"]["min"]);
+      	      }else{
+      	        $filterSummary["op"] = "between";
+      	        $filterSummary["value"] = array( $filterSummary["value"]["min"],$filterSummary["value"]["max"]);
+      	      }
+      	    }
+      	  }
+      	  break;
+      	  
+      }
+      if($includeFilter && !empty($filterSummary["label"])){
+        $filtersSummary[$fieldName]=$filterSummary;
+      }
+      
+
+    }
+
+    
+  }
+  return $filtersSummary;
+}
+ 
+ /*
+ * The same as devel dpq, to avoid dependency on devel
+ */
+function views_utils_dpq($query, $return = FALSE) {
+  if (method_exists($query, 'preExecute')) {
+    $query->preExecute();
+  }
+  $sql = (string) $query;
+  $quoted = array();
+  $connection = Database::getConnection();
+  foreach ((array) $query->arguments() as $key => $val) {
+    $quoted[$key] = $connection->quote($val);
+  }
+  $sql = strtr($sql, $quoted);
+  if ($return) {
+    return $sql;
+  }
+  return ($return ? NULL : $query);
+}
+
+ 
